@@ -54,6 +54,21 @@ RUN add-apt-repository ppa:inivation-ppa/inivation \
     && apt-get install -y --no-install-recommends libcaer-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# ── Build libusb 1.0.25 from source ───────────────────────────────────────
+# Ubuntu 20.04 ships libusb 1.0.23 which cannot open DVXplorer on Jetson
+# (JetPack 5/6 USB controller requires fixes introduced in 1.0.25).
+# The Ubuntu 22.04 binary requires GLIBC_2.34 which is not in 20.04, so we
+# compile from source against the container's GLIBC 2.31.
+RUN curl -fsSL https://github.com/libusb/libusb/releases/download/v1.0.25/libusb-1.0.25.tar.bz2 \
+        -o /tmp/libusb.tar.bz2 \
+    && tar -xjf /tmp/libusb.tar.bz2 -C /tmp \
+    && cd /tmp/libusb-1.0.25 \
+    && ./configure --prefix=/usr --disable-udev \
+    && make -j$(nproc) \
+    && make install \
+    && ldconfig \
+    && rm -rf /tmp/libusb.tar.bz2 /tmp/libusb-1.0.25
+
 # ── Catkin workspace ───────────────────────────────────────────────────────
 WORKDIR ${CATKIN_WS}
 RUN mkdir -p src
@@ -93,7 +108,7 @@ RUN cd ${CATKIN_WS}/src \
 # Builds dvs_tracking, mapper_emvs_stereo and all transitive catkin deps
 # (dvxplorer_ros_driver, dvs_msgs, minkindr, glog, gflags, vicon stub …).
 RUN source /opt/ros/${ROS_DISTRO}/setup.bash \
-    && catkin build dvs_tracking mapper_emvs_stereo
+    && catkin build dvxplorer_ros_driver dvs_tracking mapper_emvs_stereo
 
 # ── Shell environment ──────────────────────────────────────────────────────
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /root/.bashrc \

@@ -1,0 +1,20 @@
+<launch>
+  <!-- Serial numbers for this rig — override at launch time if needed:
+       roslaunch dvxplorer_ros_driver stereo.launch serial_left:=DXA00247 serial_right:=DXA00420 -->
+  <arg name="serial_left"  default="DXA00247"/>
+  <arg name="serial_right" default="DXA00420"/>
+
+  <!-- master DVXplorer -->
+  <node ns="dvxplorer_left" name="dvxplorer_ros_driver" pkg="dvxplorer_ros_driver" type="dvxplorer_ros_driver" output="screen">
+    <param name="serial_number" type="str" value="$(arg serial_left)" />
+    <param name="master" value="True"/>
+    <param name="reset_timestamps_delay" value="2.0"/>
+  </node>
+
+  <!-- slave DVXplorer -->
+  <node ns="dvxplorer_right" name="dvxplorer_ros_driver" pkg="dvxplorer_ros_driver" type="dvxplorer_ros_driver" output="screen">
+    <param name="serial_number" type="str" value="$(arg serial_right)" />
+    <param name="master" value="False"/>
+    <remap from="reset_timestamps" to="/dvxplorer_left/reset_timestamps"/>
+  </node>
+</launch>
