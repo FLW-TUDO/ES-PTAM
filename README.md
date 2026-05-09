@@ -43,7 +43,75 @@ If you use this work in your research, please cite it as follows:
 * [Installation](docs/installation.md)
 * [Running examples on different datasets](docs/examples.md)
 * [Running live with DAVIS cameras](docs/live_demo.md)
+* [Running live with DVXplorer cameras (Docker / Jetson)](#docker-installation-jetson--arm64)
 * [Parameter tuning](docs/parameters.md)
+
+## Docker Installation (Jetson / ARM64)
+
+The `flw-dvxplorer` branch ships a ready-to-use Dockerfile that targets **ARM64** (Jetson Orin / Xavier / Nano) running Ubuntu 22.04 (JetPack 6.x) or Ubuntu 20.04 (JetPack 5.x).  
+The container uses **ROS Noetic on Ubuntu 20.04** regardless of the host OS version.
+
+### Prerequisites
+
+* [Docker Engine](https://docs.docker.com/engine/install/ubuntu/) installed on the Jetson
+* DVXplorer cameras connected via USB
+
+### 1. Build the image
+
+```bash
+git clone <this-repo> && cd ES-PTAM
+git checkout flw-dvxplorer
+
+docker build --platform linux/arm64 \
+             -t esptam:dvxplorer \
+             -f Dockerfile .
+```
+
+> The build clones all catkin dependencies and compiles `dvs_tracking` and
+> `mapper_emvs_stereo`. On a Jetson this typically takes **30–60 minutes**.
+
+### 2. Run the container
+
+A convenience script handles USB passthrough and X11 forwarding:
+
+```bash
+chmod +x docker/run_dvxplorer.sh
+./docker/run_dvxplorer.sh          # opens an interactive shell
+```
+
+The script mounts `/dev/bus/usb` so the DVXplorer cameras are accessible inside
+the container, and forwards the host display for RViz / rqt.
+
+### 3. Launch the pipeline
+
+Open **four terminals**, each running the same container image:
+
+```bash
+# Terminal 1 – ROS master
+./docker/run_dvxplorer.sh roscore
+
+# Terminal 2 – DVXplorer ROS driver (left + right cameras)
+./docker/run_dvxplorer.sh roslaunch dvxplorer_ros_driver dvxplorer_stereo.launch
+
+# Terminal 3 – Tracker
+./docker/run_dvxplorer.sh roslaunch dvs_tracking live_tracker_dvxplorer.launch
+
+# Terminal 4 – Mapper
+./docker/run_dvxplorer.sh roslaunch mapper_emvs_stereo live_mapper_dvxplorer.launch
+```
+
+> **ROVIO bootstrapping:** Install [ROVIO](https://github.com/ethz-asl/rovio)
+> natively or in a separate container, copy
+> `rovio_launch/rovio_dvxplorer_live.launch` into its `launch/` directory, and
+> launch it before starting the tracker.
+
+### Environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `ROS_MASTER_URI` | `http://localhost:11311` | ROS master address |
+| `ROS_IP` | `127.0.0.1` | This machine's IP for ROS networking |
+| `DISPLAY` | host `$DISPLAY` | X11 display for RViz / rqt |
 
 ## Results
 The original ES-PTAM trajectories and GT poses for various sequences are available [here](trajectory_eval).
