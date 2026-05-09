@@ -36,10 +36,8 @@ repositories:
     type: git
     url: https://github.com/uzh-rpg/cnpy_catkin.git
     version: master
-  vicon:
-    type: git
-    url: https://github.com/KumarRobotics/vicon.git
-    version: master
+  # vicon is replaced by docker/stub_packages/vicon (ARM64-safe stub that
+  # provides vicon/Subject.h without the x86_64-only precompiled SDK).
   cmake_external_project_catkin:
     type: git
     url: https://github.com/zurich-eye/cmake_external_project_catkin.git

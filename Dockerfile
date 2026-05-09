@@ -1,7 +1,10 @@
 # syntax=docker/dockerfile:1
 # ES-PTAM – ARM64 (Jetson) image with ROS Noetic / Ubuntu 20.04
-# Works on any ARM64 host (JetPack 5.x / 6.x with Ubuntu 20.04 or 22.04)
-FROM --platform=linux/arm64 ros:noetic-ros-base
+# Works on any ARM64 host (JetPack 5.x / 6.x, Ubuntu 20.04 or 22.04)
+#
+# Use a build ARG so BuildKit lint does not complain about a constant platform.
+ARG TARGETARCH=arm64
+FROM ros:noetic-ros-base
 
 LABEL description="ES-PTAM DVXplorer – Event-based Stereo Parallel Tracking and Mapping" \
       arch="linux/arm64"
@@ -21,6 +24,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-vcstool \
         python2.7 \
         software-properties-common \
+        # autoconf/libtool needed by glog_catkin (builds glog from source)
+        libtool \
+        automake \
+        autoconf \
         # USB / device support for DVXplorer
         udev \
         libusb-1.0-0-dev \
@@ -34,6 +41,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-noetic-eigen-conversions \
         ros-noetic-tf \
         ros-noetic-nodelet \
+        ros-noetic-sophus \
         ros-noetic-rviz \
         ros-noetic-rqt \
         ros-noetic-rqt-common-plugins \
@@ -46,7 +54,7 @@ RUN add-apt-repository ppa:inivation-ppa/inivation \
     && apt-get install -y --no-install-recommends libcaer-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Catkin workspace setup ─────────────────────────────────────────────────
+# ── Catkin workspace ───────────────────────────────────────────────────────
 WORKDIR ${CATKIN_WS}
 RUN mkdir -p src
 
@@ -63,7 +71,18 @@ RUN source /opt/ros/${ROS_DISTRO}/setup.bash \
 # ── Copy sources ───────────────────────────────────────────────────────────
 COPY . ${CATKIN_WS}/src/ES-PTAM/
 
-# Use the HTTPS-only dependency file so no SSH keys are required at build time
+# Stub vicon package: replaces KumarRobotics/vicon which ships a precompiled
+# x86_64-only SDK (libboost_locale-mt.so.1.53.0) that cannot link on ARM64.
+# The stub provides only the vicon/Subject.h ROS message header required by
+# mapper_emvs_stereo/src/calib.cpp, without any native SDK.
+#
+# COPY . above also copied docker/stub_packages/vicon into the ES-PTAM tree.
+# Remove it so catkin only sees one package named "vicon" (the one below).
+RUN rm -rf ${CATKIN_WS}/src/ES-PTAM/docker/stub_packages
+
+COPY docker/stub_packages/vicon ${CATKIN_WS}/src/vicon/
+
+# Use HTTPS-only dependency file (no SSH keys needed inside Docker).
 COPY docker/dependencies_https.yaml ${CATKIN_WS}/src/dependencies_https.yaml
 
 # ── Clone catkin dependencies ──────────────────────────────────────────────
@@ -71,11 +90,10 @@ RUN cd ${CATKIN_WS}/src \
     && vcs-import < dependencies_https.yaml
 
 # ── Build ──────────────────────────────────────────────────────────────────
-# Builds dvs_tracking, mapper_emvs_stereo and all their catkin dependencies
-# (dvxplorer_ros_driver, dvs_msgs, minkindr, glog, gflags, …).
+# Builds dvs_tracking, mapper_emvs_stereo and all transitive catkin deps
+# (dvxplorer_ros_driver, dvs_msgs, minkindr, glog, gflags, vicon stub …).
 RUN source /opt/ros/${ROS_DISTRO}/setup.bash \
-    && catkin build dvs_tracking mapper_emvs_stereo \
-    && catkin build --summarize
+    && catkin build dvs_tracking mapper_emvs_stereo
 
 # ── Shell environment ──────────────────────────────────────────────────────
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /root/.bashrc \
