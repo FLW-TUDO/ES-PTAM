@@ -16,15 +16,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Allow the container to open windows on the host display
 xhost +local:docker 2>/dev/null || true
 
+# Resolve X11 auth — works for both local display and SSH -X forwarding.
+XAUTH_FILE="${XAUTHORITY:-${HOME}/.Xauthority}"
+
 docker run -it --rm \
     --network host \
     --privileged \
     --env DISPLAY="${DISPLAY}" \
+    --env XAUTHORITY="/root/.Xauthority" \
     --env ROS_MASTER_URI="${ROS_MASTER_URI:-http://localhost:11311}" \
     --env ROS_IP="${ROS_IP:-127.0.0.1}" \
     --volume /dev:/dev \
     --volume /sys:/sys:ro \
     --volume /tmp/.X11-unix:/tmp/.X11-unix:rw \
+    --volume "${XAUTH_FILE}:/root/.Xauthority:ro" \
     --volume "${SCRIPT_DIR}/stereo.launch:/catkin_ws/src/rpg_dvs_ros/dvxplorer_ros_driver/launch/stereo.launch:ro" \
     "${IMAGE}" \
     "$@"
