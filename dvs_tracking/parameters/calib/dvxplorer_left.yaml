@@ -1,0 +1,23 @@
+image_width: 640
+image_height: 480
+camera_name: dvxplorer_left
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [678.8782966, 0, 297.41219959, 0, 677.88338572, 239.91490692, 0, 0, 1]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [-0.38038182, 0.17294122, -0.00096285, 0.00377356, 0]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data:
+    [678.8782966, 0, 297.41219959, 0,
+     0, 677.88338572, 239.91490692, 0,
+     0, 0, 1, 0]

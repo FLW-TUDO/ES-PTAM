@@ -1,0 +1,89 @@
+<launch>
+    <arg name="auto_trigger" default="false"/> <!-- whether to automatic startup the pipeline at the first data received -->
+    <!-- DVXplorer has no frame sensor; bootstrap_image_topic is unused unless you add a separate frame source -->
+    <arg name="events_topic" default="/dvxplorer_left/events" /> <!-- topic published by dvxplorer_ros_driver -->
+
+    <!-- TODO: replace with your calibrated dvxplorer_left.yaml once you fill in actual values -->
+    <arg name="camera_name" default="dvxplorer_left" />
+    <param name="camera_name" value="$(arg camera_name)" />
+    <param name="calib_file" value="$(find dvs_tracking)/parameters/calib/$(arg camera_name).yaml" />
+
+    <remap from="events" to="$(arg events_topic)" />
+    <remap from="remote_key" to="/evo/remote_key" />
+
+    <param name="world_frame_id" value="world"/>
+    <param name="dvs_bootstrap_frame_id" value="camera0" />
+    <param name="dvs_frame_id" value="dvs0" />
+
+    <!-- EVO: mapping + tracking -->
+    <param name="min_depth" value="0.5" />
+    <param name="max_depth" value="4" />
+    <param name="num_depth_cells" value="100" />
+
+    <!-- DVXplorer resolution: 640x480 -->
+    <param name="fov_virtual_camera_deg" value="80.0" />
+    <param name="virtual_width" value="640" />
+    <param name="virtual_height" value="480" />
+
+    <!-- Map expansion -->
+    <node name="trigger_map_expansion" pkg="mapper_emvs_stereo" type="trigger_map_expansion.py" output="screen" >
+        <remap from="remote_key" to="evo/remote_key" />
+        <remap from="pointcloud" to="dvs_mapping/pointcloud" />
+
+        <param name="visibility_threshold" value="0.5" />
+        <param name="coverage_threshold" value="0.2" />
+        <param name="baseline_threshold" value="0.1" />
+        <param name="rate" value="1" />
+        <param name="number_of_initial_maps_to_skip" value="0"/>
+    </node>
+
+    <!-- Tracking module -->
+    <node name="dvs_tracking" pkg="dvs_tracking" type="dvs_tracking_ros" required="true" output="screen">
+        <param name="discard_events_when_idle" value="false"/>
+        <param name="batch_size" value="200" />
+        <param name="max_iterations" value="150" />
+        <param name="pyramid_levels" value="2" />
+        <param name="map_blur" value="5" />
+        <param name="noise_rate" value="1000" />
+        <param name="frame_size" value="10000" />
+        <param name="step_size" value="10000" />
+        <param name="max_event_rate" value="8000000" />
+        <param name="pose_mean_filter_size" value="5" />
+        <param name="events_per_kf" value="200000" />
+        <param name="event_map_overlap_rate" value="15" />
+
+        <param name="min_map_size" value="0"/>
+        <param name="min_n_keypoints" value="0"/>
+
+        <param name="auto_trigger" value="$(arg auto_trigger)"/>
+        <remap from="pointcloud" to="dvs_mapping/pointcloud" />
+    </node>
+
+    <node name="tf_to_camera_marker" pkg="evo_utils" type="tf_to_camera_markers.py" output="screen" >
+      <param name="marker_scale" value="0.2" />
+    </node>
+
+    <node name="snakify" pkg="evo_utils" type="snakify.py" output="screen" >
+      <param name="length" value="100" />
+    </node>
+
+    <node name="rqt_evo" pkg="rqt_evo" type="rqt_evo"></node>
+
+    <!-- visualization -->
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find dvs_tracking)/rviz/demo.rviz" />
+
+    <node name="dvs_renderer_left" pkg="dvs_renderer" type="dvs_renderer">
+      <param name="color_mode" value="red-blue"/>
+      <remap from="events" to="/dvxplorer_left/events" />
+      <remap from="dvs_rendering" to="dvs_rendering_left" />
+      <remap from="camera_info" to="/dvxplorer_left/camera_info" />
+    </node>
+
+    <node name="dvs_renderer_right" pkg="dvs_renderer" type="dvs_renderer">
+      <param name="color_mode" value="red-blue"/>
+      <remap from="events" to="/dvxplorer_right/events" />
+      <remap from="dvs_rendering" to="dvs_rendering_right" />
+      <remap from="camera_info" to="/dvxplorer_right/camera_info" />
+    </node>
+
+</launch>

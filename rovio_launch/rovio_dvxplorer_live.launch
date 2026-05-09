@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+  <!-- IDS RGB camera (cam1, 1448x1086) -->
+  <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" output="screen" />
+  <node pkg="nodelet" type="nodelet" name="ueye_cam_nodelet"
+        args="load ueye_cam/ueye_cam_nodelet nodelet_manager" output="screen">
+    <param name="camera_name"   type="str"    value="ids_rgb" />
+    <param name="camera_topic"  type="str"    value="image_raw" />
+    <param name="camera_id"     type="int"    value="0" />  <!-- 0 = first available IDS camera -->
+    <param name="color_mode"    type="str"    value="mono8" />  <!-- ROVIO needs grayscale -->
+    <param name="image_width"   type="int"    value="1448" />
+    <param name="image_height"  type="int"    value="1086" />
+    <param name="image_top"     type="int"    value="-1" />
+    <param name="image_left"    type="int"    value="-1" />
+    <param name="auto_gain"        type="bool"   value="True" />
+    <param name="auto_exposure"    type="bool"   value="True" />
+    <param name="auto_white_balance" type="bool" value="True" />
+    <param name="auto_frame_rate"  type="bool"   value="False" />
+    <param name="frame_rate"       type="double" value="20.0" />
+    <param name="pixel_clock"      type="int"    value="25" />
+    <param name="subsampling"      type="int"    value="1" />
+    <param name="binning"          type="int"    value="1" />
+    <param name="sensor_scaling"   type="double" value="1.0" />
+  </node>
+
+  <!-- ROVIO: visual-inertial odometry -->
+  <!-- Images from IDS RGB camera, IMU from DVXplorer left -->
+  <node pkg="rovio" type="rovio_node" name="rovio" output="screen">
+    <param name="filter_config"  value="$(find rovio)/cfg/rovio_dvxplorer.info" />
+    <param name="camera0_config" value="$(find rovio)/cfg/ids_rgb_cam1.yaml" />
+    <remap from="/cam0/image_raw" to="/ids_rgb/image_raw" />
+    <remap from="/imu0"           to="/dvxplorer_left/imu" />
+  </node>
+
+</launch>

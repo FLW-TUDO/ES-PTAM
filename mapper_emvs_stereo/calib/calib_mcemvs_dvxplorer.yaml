@@ -1,0 +1,24 @@
+# DVXplorer stereo calibration for MC-EMVS mapper
+# cam0 = dvxplorer_left, cam2 = dvxplorer_right (from kalibr images-results-cam.txt, mar_20)
+# cam1 (RGB) is skipped; T_cn_cnm1 is T_2_0 = T_2_1 * T_1_0
+cam0:
+  cam_overlaps: [1]
+  camera_model: pinhole
+  distortion_coeffs: [-0.38038182, 0.17294122, -0.00096285, 0.00377356]
+  distortion_model: radtan
+  intrinsics: [678.8782966, 677.88338572, 297.41219959, 239.91490692]
+  resolution: [640, 480]
+  rostopic: /dvxplorer_left/image_raw
+cam1:
+  T_cn_cnm1:
+  - [ 0.9999942296, -0.0005279402, -0.0033559005, -0.1036224161]
+  - [ 0.0005471712,  0.9999834214,  0.0057321529, -0.0009418446]
+  - [ 0.0033528186, -0.0057339561,  0.9999779399,  0.0026618511]
+  - [ 0.0,           0.0,           0.0,           1.0          ]
+  cam_overlaps: [0]
+  camera_model: pinhole
+  distortion_coeffs: [-0.34329636, 0.08773474, -0.00124822, 0.00447985]
+  distortion_model: radtan
+  intrinsics: [749.57922714, 748.74858006, 314.39164963, 256.89212057]
+  resolution: [640, 480]
+  rostopic: /dvxplorer_right/image_raw
